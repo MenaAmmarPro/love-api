@@ -1,0 +1,41 @@
+name: Deploy love-api
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Unit tests
+        run: node --test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the KV namespace id is set
+        id: guard
+        run: |
+          if grep -q "PASTE_KV_NAMESPACE_ID" wrangler.toml; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::wrangler.toml still has the placeholder KV id — skipping deploy. Run 'wrangler kv namespace create WISHES' and paste the id."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to Cloudflare
+        if: steps.guard.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
