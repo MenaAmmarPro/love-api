@@ -8,4 +8,4 @@ workers_dev = true
 # then paste the returned id below (replacing the placeholder).
 [[kv_namespaces]]
 binding = "WISHES"
-id = "PASTE_KV_NAMESPACE_ID_HERE"
+id = "834fed1c210740fe906b030af56d21e6"
