@@ -1,0 +1,16 @@
+{
+  "name": "love-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The wishes-wall backend for the Love for Mena sites (Cloudflare Worker + KV).",
+  "license": "CC-BY-NC-ND-4.0",
+  "scripts": {
+    "test": "node --test",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
