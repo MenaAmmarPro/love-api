@@ -9,3 +9,9 @@ workers_dev = true
 [[kv_namespaces]]
 binding = "WISHES"
 id = "834fed1c210740fe906b030af56d21e6"
+
+# The two-person chat lives in its own namespace.
+# Create it once with:  wrangler kv namespace create CHAT
+[[kv_namespaces]]
+binding = "CHAT"
+id = "fa5f1a0c524d454f9b7111b6beee3dd7"
