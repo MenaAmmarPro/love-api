@@ -1,30 +1,31 @@
 "use strict";
 
 /*
- * love-api — the wishes-wall backend for the Love for Mena sites.
+ * love-api — the backend for the Love for Mena sites.
  *
- * A tiny Cloudflare Worker over a KV namespace (binding: WISHES).
+ * A tiny Cloudflare Worker over two KV namespaces:
+ *   WISHES — the public wishes wall
+ *   CHAT   — the private two-person chat
  *
- *   GET  /health   -> { ok, service }
- *   GET  /wishes   -> newest-first list  (?limit=1..100, ?cursor=)
- *   POST /wishes   -> { name, message, website(honeypot) } -> created wish
+ *   GET  /health        -> { ok, service }
+ *   GET  /wishes        -> newest-first list  (?limit=1..100, ?cursor=)
+ *   POST /wishes        -> { name, message, website(honeypot) } -> created wish
+ *   *    /chat/*        -> see src/chat.js (register, login, messages, ...)
  *
  * Wishes are public and appear instantly, with a honeypot, a per-IP rate
  * limit, length caps and a light abuse guard to keep it kind and clean.
+ * Chat is private: two people, passphrase-protected, Bearer tokens.
  */
 
 import { createWish, listWishes } from "./store.js";
+import { corsHeaders, json } from "./cors.js";
+import { handleChat } from "./chat.js";
 
 const SERVICE = "love-api";
 const MAX_MSG = 280;
 const MAX_NAME = 40;
 const RATE_LIMIT = 5; // writes allowed per window
 const RATE_WINDOW_MS = 60_000;
-
-const ALLOWED_ORIGINS = [
-  "https://menaammarpro.github.io",
-  "https://www.menaammarpro.github.io"
-];
 
 // Very small abuse guard — lowercase substrings that never belong on the wall.
 const BANNED = [
@@ -36,34 +37,6 @@ const BANNED = [
   "porn",
   "xxx"
 ];
-
-function isAllowedOrigin(origin) {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  return /^http:\/\/localhost(:\d+)?$/.test(origin) ||
-    /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
-}
-
-function corsHeaders(origin) {
-  const allowed = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-    "Vary": "Origin"
-  };
-}
-
-function json(body, status, origin) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...corsHeaders(origin)
-    }
-  });
-}
 
 function clean(text, max) {
   return String(text == null ? "" : text)
@@ -161,6 +134,10 @@ export default {
 
       if (url.pathname === "/wishes" && request.method === "POST") {
         return await handlePostWish(request, env, origin);
+      }
+
+      if (url.pathname === "/chat" || url.pathname.startsWith("/chat/")) {
+        return await handleChat(request, env, origin, url);
       }
 
       return json({ ok: false, error: "Not found." }, 404, origin);
