@@ -201,6 +201,11 @@ test("typing is a quick pulse; read receipts clear unread", async () => {
   const typing = await worker.fetch(req("POST", "/chat/typing", { token: b.token }), env);
   assert.equal(typing.status, 200);
 
+  const seen = await (await await worker.fetch(
+    req("GET", "/chat/state", { token: a.token }), env)).json();
+  assert.equal(seen.partner.typing, true, "state shows the partner typing");
+  assert.equal(seen.partner.online, true);
+
   const sent = await (await worker.fetch(
     req("POST", "/chat/messages", { body: { text: "call me?" }, token: b.token }), env)).json();
 

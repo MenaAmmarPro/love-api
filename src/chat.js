@@ -247,15 +247,15 @@ async function handleState(request, env, origin, session) {
   const users = await listUsers(env);
   const partner = users.find((u) => u.id !== session.user.id);
   let partnerOnline = false;
+  let partnerTyping = false;
   if (partner) {
-    partnerOnline = Boolean(
-      (await env.CHAT.get("seen:" + partner.id)) || (await env.CHAT.get("typing:" + partner.id))
-    );
+    partnerTyping = Boolean(await env.CHAT.get("typing:" + partner.id));
+    partnerOnline = Boolean((await env.CHAT.get("seen:" + partner.id)) || partnerTyping);
   }
   return json({
     ok: true,
     me: { id: session.user.id, name: session.user.name },
-    partner: partner ? { id: partner.id, name: partner.name, online: partnerOnline } : null,
+    partner: partner ? { id: partner.id, name: partner.name, online: partnerOnline, typing: partnerTyping } : null,
     unread: await unreadCount(env, session.user.id),
     lastRead: Number(await env.CHAT.get("read:" + session.user.id)) || 0
   }, 200, origin);
